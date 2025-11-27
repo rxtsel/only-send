@@ -89,7 +89,7 @@ pub async fn get_sent_email(app: AppHandle<Wry>, email_id: String) -> Result<Sen
         from: email.from,
         to: email.to,
         subject: email.subject,
-        html: email.html,
+        html: email.html.or(email.text),
         created_at: email.created_at,
         cc: email.cc,
         bcc: email.bcc,
