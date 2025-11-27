@@ -24,33 +24,29 @@ pub async fn list_sent_emails(
     limit: Option<usize>,
     offset: Option<usize>,
 ) -> Result<Vec<SentEmail>, String> {
-    // Get API key from storage
     let api_key = store::get_api_key(app.clone())?
         .ok_or_else(|| "[ERROR] API key not configured".to_string())?;
 
     let resend = Resend::new(&api_key);
 
-    // Create list options with limit
     let lim = limit.unwrap_or(12);
     let off = offset.unwrap_or(0);
 
-    // Convert usize to u8, clamping to max value
-    let lim_u8 = lim.min(255).try_into().unwrap_or(12u8);
+    // Pedimos hasta offset + limit, para poder "paginar" a mano
+    let effective_limit = (lim + off).min(255);
+    let list_opts = ListOptions::default().with_limit(effective_limit as u8);
 
-    let list_opts = ListOptions::default().with_limit(lim_u8);
-
-    // List emails from Resend API
     let response = resend
         .emails
         .list(list_opts)
         .await
         .map_err(|e| format!("[ERROR] Failed to fetch sent emails: {}", e))?;
 
-    // Apply offset manually since resend-rs might not support it directly
     let sent_emails: Vec<SentEmail> = response
         .data
         .into_iter()
-        .skip(off)
+        .skip(off) // Skip previeous pages
+        .take(lim) // Only take 'limit' items
         .map(|email| SentEmail {
             id: email.id.to_string(),
             from: email.from,
