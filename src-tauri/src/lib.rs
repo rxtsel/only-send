@@ -1,6 +1,7 @@
 mod config;
 mod email;
 mod profile;
+mod sent;
 mod store;
 use tauri_plugin_store::StoreExt;
 
@@ -27,6 +28,8 @@ pub fn run() {
             config::delete_from_email,
             profile::get_profile,
             profile::save_profile_command,
+            sent::list_sent_emails,
+            sent::get_sent_email
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

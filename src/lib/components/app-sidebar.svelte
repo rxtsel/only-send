@@ -1,130 +1,127 @@
 <script lang="ts" module>
   import SendIcon from "@lucide/svelte/icons/send";
   import PlusIcon from "@lucide/svelte/icons/plus";
+  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import SettingsDialog from "./settings-dialog.svelte";
-
-  // This is sample data
-  const data = {
-    navMain: [
-      {
-        title: "Sent",
-        url: "/mail/sent",
-        icon: SendIcon,
-        isActive: false,
-      },
-    ],
-    mails: [
-      {
-        id: "1",
-        name: "William Smith",
-        email: "williamsmith@example.com",
-        subject: "Meeting Tomorrow",
-        date: "09:34 AM",
-        teaser:
-          "Hi team, just a reminder about our meeting tomorrow at 10 AM.\nPlease come prepared with your project updates.",
-      },
-      {
-        id: "2",
-        name: "Alice Smith",
-        email: "alicesmith@example.com",
-        subject: "Re: Project Update",
-        date: "Yesterday",
-        teaser:
-          "Thanks for the update. The progress looks great so far.\nLet's schedule a call to discuss the next steps.",
-      },
-      {
-        id: "3",
-        name: "Bob Johnson",
-        email: "bobjohnson@example.com",
-        subject: "Weekend Plans",
-        date: "2 days ago",
-        teaser:
-          "Hey everyone! I'm thinking of organizing a team outing this weekend.\nWould you be interested in a hiking trip or a beach day?",
-      },
-      {
-        id: "4",
-        name: "Emily Davis",
-        email: "emilydavis@example.com",
-        subject: "Re: Question about Budget",
-        date: "2 days ago",
-        teaser:
-          "I've reviewed the budget numbers you sent over.\nCan we set up a quick call to discuss some potential adjustments?",
-      },
-      {
-        id: "5",
-        name: "Michael Wilson",
-        email: "michaelwilson@example.com",
-        subject: "Important Announcement",
-        date: "1 week ago",
-        teaser:
-          "Please join us for an all-hands meeting this Friday at 3 PM.\nWe have some exciting news to share about the company's future.",
-      },
-      {
-        id: "6",
-        name: "Sarah Brown",
-        email: "sarahbrown@example.com",
-        subject: "Re: Feedback on Proposal",
-        date: "1 week ago",
-        teaser:
-          "Thank you for sending over the proposal. I've reviewed it and have some thoughts.\nCould we schedule a meeting to discuss my feedback in detail?",
-      },
-      {
-        id: "7",
-        name: "David Lee",
-        email: "davidlee@example.com",
-        subject: "New Project Idea",
-        date: "1 week ago",
-        teaser:
-          "I've been brainstorming and came up with an interesting project concept.\nDo you have time this week to discuss its potential impact and feasibility?",
-      },
-      {
-        id: "8",
-        name: "Olivia Wilson",
-        email: "oliviawilson@example.com",
-        subject: "Vacation Plans",
-        date: "1 week ago",
-        teaser:
-          "Just a heads up that I'll be taking a two-week vacation next month.\nI'll make sure all my projects are up to date before I leave.",
-      },
-      {
-        id: "9",
-        name: "James Martin",
-        email: "jamesmartin@example.com",
-        subject: "Re: Conference Registration",
-        date: "1 week ago",
-        teaser:
-          "I've completed the registration for the upcoming tech conference.\nLet me know if you need any additional information from my end.",
-      },
-      {
-        id: "10",
-        name: "Sophia White",
-        email: "sophiawhite@example.com",
-        subject: "Team Dinner",
-        date: "1 week ago",
-        teaser:
-          "To celebrate our recent project success, I'd like to organize a team dinner.\nAre you available next Friday evening? Please let me know your preferences.",
-      },
-    ],
-  };
 </script>
 
 <script lang="ts">
   import NavUser from "./nav-user.svelte";
-  import { Label } from "@/lib/components/ui/label/index.js";
   import { useSidebar } from "@/lib/components/ui/sidebar/context.svelte.js";
   import * as Sidebar from "@/lib/components/ui/sidebar/index.js";
-  import { Switch } from "@/lib/components/ui/switch/index.js";
+  import { Button } from "@/lib/components/ui/button/index.js";
   import type { ComponentProps } from "svelte";
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
+  import { onMount } from "svelte";
+  import { toast } from "svelte-sonner";
+  import type { SentEmail } from "../types";
+  import {
+    formatEmailDate,
+    getEmailTeaser,
+    listSentEmails,
+  } from "../commom/sent";
+  import { Loader } from "@lucide/svelte";
 
   let {
     ref = $bindable(null),
     ...restProps
   }: ComponentProps<typeof Sidebar.Root> = $props();
 
+  const data = {
+    navMain: [
+      {
+        title: "Sent",
+        url: "/mail/sent",
+        icon: SendIcon,
+        isActive: true,
+      },
+    ],
+  };
+
   let activeItem = $state(data.navMain[0]);
-  let mails = $state(data.mails);
+  let mails = $state<SentEmail[]>([]);
+  let isRefreshing = $state(false);
+  let isLoadingMore = $state(false);
+  let hasMore = $state(true);
+  let currentPage = $state(0);
+
   const sidebar = useSidebar();
+  const PAGE_SIZE = 12;
+
+  async function loadSentEmails(append = false) {
+    try {
+      if (append) {
+        isLoadingMore = true;
+      } else {
+        isRefreshing = true;
+        currentPage = 0;
+      }
+
+      const page = append ? currentPage + 1 : 0;
+      const offset = page * PAGE_SIZE;
+
+      console.log(
+        `Loading emails - Page: ${page}, Offset: ${offset}, Append: ${append}`,
+      );
+
+      const newMails = await listSentEmails(PAGE_SIZE, offset);
+
+      console.log(`Received ${newMails.length} emails`);
+
+      if (append) {
+        mails = [...mails, ...newMails];
+        currentPage = page;
+      } else {
+        mails = newMails;
+        currentPage = 0;
+      }
+
+      // Check if there are more emails
+      hasMore = newMails.length === PAGE_SIZE;
+    } catch (error) {
+      console.error("Error loading sent emails:", error);
+      toast.error("Failed to load sent emails");
+    } finally {
+      isRefreshing = false;
+      isLoadingMore = false;
+    }
+  }
+
+  async function handleRefresh() {
+    await loadSentEmails(false);
+    toast.success("Emails refreshed");
+  }
+
+  async function handleLoadMore() {
+    if (!isLoadingMore && hasMore) {
+      await loadSentEmails(true);
+    }
+  }
+
+  function handleEmailClick(mailId: string) {
+    goto(`/mail/sent/${mailId}`);
+  }
+
+  // Export function to be called from composer after sending
+  export function refreshEmails() {
+    return loadSentEmails(false);
+  }
+
+  onMount(() => {
+    loadSentEmails(false);
+
+    // Listen for email sent events
+    const handleEmailSent = () => {
+      loadSentEmails(false);
+    };
+
+    window.addEventListener("email-sent", handleEmailSent);
+
+    return () => {
+      window.removeEventListener("email-sent", handleEmailSent);
+    };
+  });
 </script>
 
 <Sidebar.Root
@@ -134,8 +131,6 @@
   {...restProps}
 >
   <!-- This is the first sidebar -->
-  <!-- We disable collapsible and adjust width to icon. -->
-  <!-- This will make the sidebar appear as icons. -->
   <Sidebar.Root
     collapsible="none"
     class="w-[calc(var(--sidebar-width-icon)+1px)]! border-e"
@@ -198,40 +193,68 @@
   </Sidebar.Root>
 
   <!-- This is the second sidebar -->
-  <!-- We disable collapsible and let it fill remaining space -->
   <Sidebar.Root collapsible="none" class="hidden flex-1 md:flex">
     <Sidebar.Header class="gap-3.5 border-b p-4">
       <div class="flex w-full items-center justify-between">
         <div class="text-foreground text-base font-medium">
           {activeItem.title}
         </div>
-        <Label class="flex items-center gap-2 text-sm">
-          <span>Unreads</span>
-          <Switch class="shadow-none" />
-        </Label>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onclick={handleRefresh}
+          disabled={isRefreshing}
+          title="Refresh emails"
+        >
+          <RefreshCwIcon class={isRefreshing ? "animate-spin" : ""} />
+        </Button>
       </div>
-      <Sidebar.Input placeholder="Type to search..." />
     </Sidebar.Header>
     <Sidebar.Content>
       <Sidebar.Group class="px-0">
         <Sidebar.GroupContent>
-          {#each mails as mail (mail.email)}
-            <a
-              href="##"
-              class="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-col items-start gap-2 whitespace-nowrap border-b p-4 text-sm leading-tight last:border-b-0"
-            >
-              <div class="flex w-full items-center gap-2">
-                <span>{mail.name}</span>
-                <span class="ms-auto text-xs">{mail.date}</span>
-              </div>
-              <span class="font-medium">{mail.subject}</span>
-              <span
-                class="line-clamp-2 w-[260px] whitespace-break-spaces text-xs"
+          {#if mails.length === 0 && !isRefreshing}
+            <div class="p-8 text-center text-sm text-muted-foreground">
+              No sent emails yet
+            </div>
+          {:else}
+            {#each mails as mail (mail.id)}
+              {@const isActive = page.params.id === mail.id}
+              <button
+                onclick={() => handleEmailClick(mail.id)}
+                class="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex w-full flex-col items-start gap-2 whitespace-nowrap border-b p-4 text-sm leading-tight last:border-b-0 text-left {isActive
+                  ? 'bg-sidebar-accent'
+                  : ''}"
               >
-                {mail.teaser}
-              </span>
-            </a>
-          {/each}
+                <div class="flex w-full items-center gap-2">
+                  <span class="font-medium truncate">{mail.to[0]}</span>
+                  <span class="ms-auto text-xs shrink-0">
+                    {formatEmailDate(mail.created_at)}
+                  </span>
+                </div>
+                <span class="font-medium truncate w-full">{mail.subject}</span>
+                <span
+                  class="line-clamp-2 w-full whitespace-break-spaces text-xs text-muted-foreground"
+                >
+                  {getEmailTeaser(mail.html)}
+                </span>
+              </button>
+            {/each}
+
+            {#if hasMore}
+              <button
+                onclick={handleLoadMore}
+                disabled={isLoadingMore}
+                class="w-full p-4 text-sm text-center text-muted-foreground hover:bg-sidebar-accent transition-colors"
+              >
+                {#if isLoadingMore}
+                  <Loader class="size-4 animate-spin mx-auto" />
+                {:else}
+                  <span>Load more</span>
+                {/if}
+              </button>
+            {/if}
+          {/if}
         </Sidebar.GroupContent>
       </Sidebar.Group>
     </Sidebar.Content>

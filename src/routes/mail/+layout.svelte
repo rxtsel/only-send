@@ -13,7 +13,7 @@
   let isConfirmDialogOpen = $state(false);
 </script>
 
-<Sidebar.Provider style="--sidebar-width: 350px;">
+<Sidebar.Provider style="--sidebar-width: 450px;">
   <AppSidebar />
   <Sidebar.Inset>
     <header

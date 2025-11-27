@@ -95,6 +95,9 @@
       form.reset();
 
       toast.success("Email send successfully!");
+      // Refresh the sidebar emails list
+      window.dispatchEvent(new CustomEvent("email-sent"));
+
       goto("/mail/sent");
     } catch (err) {
       console.error(err);
