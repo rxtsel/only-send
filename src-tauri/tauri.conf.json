@@ -27,7 +27,9 @@
   "bundle": {
     "active": true,
     "targets": [
-      "appimage"
+      "appimage",
+      "deb",
+      "msi"
     ],
     "icon": [
       "icons/32x32.png",
