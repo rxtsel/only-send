@@ -137,6 +137,9 @@
   class={cn(
     "border-input border rounded-md bg-background shadow-xs transition-[color,box-shadow] focus-within:border-ring outline-none focus-within:ring-[3px] focus-within:ring-ring/50 p-1 gap-1 flex flex-wrap items-center",
     className,
+    {
+      "border-red-500 focus-within:ring-red-400/50": restProps["aria-invalid"],
+    },
   )}
 >
   {#each value as tag, index (tag.id)}

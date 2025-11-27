@@ -1,30 +1,19 @@
 <script lang="ts">
+  import * as Popover from "$lib/components/ui/popover";
   import { Input } from "@/lib/components/ui/input";
   import * as Select from "$lib/components/ui/select";
   import * as Field from "@/lib/components/ui/field";
   import { InputTag } from "@/lib/components/ui/input-tag";
   import type { Tag } from "@/lib/components/ui/input-tag/input-tag.svelte";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
-  import { z } from "zod/v4";
   import { Editor } from "@/lib/components/editor";
-  import { X } from "@lucide/svelte";
-
-  const emailComposerSchema = z.object({
-    from: z.string().nonempty("From is required"),
-    to: z
-      .array(
-        z.email({
-          message: "Invalid email address",
-        }),
-      )
-      .nonempty("At least one recipient is required"),
-    subject: z.string().nonempty("Subject is required"),
-    cc: z.array(z.email()).optional(),
-    bcc: z.array(z.email()).optional(),
-    replyTo: z.email().optional().nullable(),
-    content: z.any(),
-    files: z.any().optional(),
-  });
+  import { ChevronsRight, X } from "@lucide/svelte";
+  import { toggleVariants } from "@/lib/components/ui/toggle";
+  import { buttonVariants } from "@/lib/components/ui/button";
+  import Button from "@/lib/components/ui/button/button.svelte";
+  import { emailComposerSchema } from "@/lib/schemas/email-composer.schema";
+  import { toast } from "svelte-sonner";
+  import { goto } from "$app/navigation";
 
   const fromEmailOptions = [
     "Cristhian <c@rxtsel.dev>",
@@ -34,6 +23,7 @@
 
   let toEmails = $state<Tag[]>([]);
   let from = $state<string>(fromEmailOptions[0]);
+  let subject = $state<string>("");
   let content = $state<string>("");
   let files = $state<File[]>([]);
 
@@ -43,8 +33,16 @@
   let ccEmails = $state<Tag[]>([]);
   let bccEmails = $state<Tag[]>([]);
 
+  let messageId = $state<string | null>(null);
+  let morePopoverOpen = $state(false);
+  let messageIdPopoverOpen = $state(false);
+
+  let errors: Record<string, string> = $state({});
+
   function handleSubmit(event: Event) {
     event.preventDefault();
+
+    errors = {};
     const form = event.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
 
@@ -54,22 +52,47 @@
     const data = {
       from: formData.get("from"),
       to: toEmailsList,
-      subject: formData.get("subject"),
+      subject: messageId
+        ? "Re: " + formData.get("subject")
+        : formData.get("subject"),
       bcc: isBccEnabled ? formData.getAll("bcc") : [],
       cc: isCcEnabled ? formData.getAll("cc") : [],
       replyTo: isReplyToEnabled ? formData.get("replyTo") : null,
       content,
       files,
+      messageId: messageId ? messageId : null,
     };
 
     const rawData = emailComposerSchema.safeParse(data);
 
-    console.log({ rawData });
+    if (!rawData.success) {
+      rawData.error.issues.forEach((issue) => {
+        errors[issue.path[0] as string] = issue.message;
+      });
+      return;
+    }
+
+    // Reset form and states
+    toEmails = [];
+    from = fromEmailOptions[0];
+    subject = "";
+    content = "";
+    files = [];
+    isCcEnabled = false;
+    isBccEnabled = false;
+    isReplyToEnabled = false;
+    ccEmails = [];
+    bccEmails = [];
+    messageId = null;
+    form.reset();
+
+    toast.success("Email send successfully!");
+    goto("/mail/sent");
   }
 </script>
 
 <form
-  class="h-full w-full overflow-hidden"
+  class="h-full w-full overflow-hidden px-1"
   onsubmit={handleSubmit}
   id="compose-email-form"
 >
@@ -79,7 +102,11 @@
       <Field.Field class="flex-1">
         <Field.Label for="from">From</Field.Label>
         <Select.Root type="single" name="from" bind:value={from}>
-          <Select.Trigger class="w-[180px]" id="from">
+          <Select.Trigger
+            class="w-[180px]"
+            id="from"
+            aria-invalid={!!errors.from}
+          >
             {#if from}
               {from}
             {:else}
@@ -92,24 +119,48 @@
             {/each}
           </Select.Content>
         </Select.Root>
+        {#if errors.from}
+          <Field.Error>{errors.from}</Field.Error>
+        {/if}
       </Field.Field>
       <Field.Field class="shrink-0 w-fit">
         <ToggleGroup.Root type="multiple" variant="outline">
           <ToggleGroup.Item
             value="cc"
-            onclick={() => (isCcEnabled = !isCcEnabled)}>Cc</ToggleGroup.Item
+            onclick={() => (isCcEnabled = !isCcEnabled)}
           >
+            Cc
+          </ToggleGroup.Item>
           <ToggleGroup.Item
             value="bcc"
-            onclick={() => (isBccEnabled = !isBccEnabled)}>Bcc</ToggleGroup.Item
+            onclick={() => (isBccEnabled = !isBccEnabled)}
           >
-          <ToggleGroup.Item
-            value="replyTo"
-            class="px-5"
-            onclick={() => (isReplyToEnabled = !isReplyToEnabled)}
-          >
-            Reply To
+            Bcc
           </ToggleGroup.Item>
+
+          <Popover.Root bind:open={morePopoverOpen}>
+            <Popover.Trigger
+              class={toggleVariants({
+                className: "border-l-0 rounded-l-none",
+                variant: "outline",
+                size: "default",
+              })}><ChevronsRight class="size-4" /></Popover.Trigger
+            >
+            <Popover.Content class="w-fit space-y-1">
+              <ToggleGroup.Item
+                value="replyTo"
+                class="px-5 rounded-md w-full"
+                onclick={() => {
+                  isReplyToEnabled = !isReplyToEnabled;
+                  morePopoverOpen = false;
+                  messageIdPopoverOpen = false;
+                }}
+              >
+                Reply To
+              </ToggleGroup.Item>
+              {@render headers()}
+            </Popover.Content>
+          </Popover.Root>
         </ToggleGroup.Root>
       </Field.Field>
     </div>
@@ -124,7 +175,11 @@
           bind:value={toEmails}
           name="to"
           placeholder="Add recipient email"
+          aria-invalid={!!errors.to}
         />
+        {#if errors.to}
+          <Field.Error>{errors.to}</Field.Error>
+        {/if}
       </Field.Field>
       {#if isCcEnabled}
         <Field.Field class="flex-1">
@@ -171,12 +226,22 @@
 
     <Field.Field>
       <Field.Label for="subject">Subject</Field.Label>
-      <Input id="subject" type="text" name="subject" placeholder="Subject" />
+      <Input
+        id="subject"
+        type="text"
+        name="subject"
+        placeholder="Subject"
+        bind:value={subject}
+        aria-invalid={!!errors.subject}
+      />
+      {#if errors.subject}
+        <Field.Error>{errors.subject}</Field.Error>
+      {/if}
     </Field.Field>
     <Field.Field class="h-full">
       <Field.Label for="content">Content</Field.Label>
       <div class="h-full flex flex-col">
-        <Editor bind:content bind:files />
+        <Editor bind:content bind:files aria-invalid={!!errors.content} />
         {#if files.length}
           <div class="border border-t-0 min-h-20 max-h-30 rounded-b-md z-10">
             <ul
@@ -207,3 +272,46 @@
     </Field.Field>
   </Field.Group>
 </form>
+
+{#snippet headers()}
+  <Popover.Root bind:open={messageIdPopoverOpen}>
+    <Popover.Trigger
+      class={buttonVariants({
+        className: "w-full block",
+        variant: "ghost",
+      })}
+    >
+      Add message ID to headers
+    </Popover.Trigger>
+    <Popover.Content>
+      <div class="relative">
+        <Input
+          placeholder="Message-ID"
+          class="w-full"
+          name="messageId"
+          bind:value={messageId}
+          onkeydown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              morePopoverOpen = false;
+              messageIdPopoverOpen = false;
+              subject = subject.startsWith("Re: ") ? subject : "Re: " + subject;
+            }
+          }}
+        />
+        <Button
+          class="absolute right-0 inset-y-0"
+          variant="ghost"
+          onclick={() => {
+            messageId = null;
+            morePopoverOpen = false;
+            messageIdPopoverOpen = false;
+            subject = subject.replace(/^Re:\s*/, "");
+          }}
+        >
+          <X class="size-4" />
+        </Button>
+      </div>
+    </Popover.Content>
+  </Popover.Root>
+{/snippet}

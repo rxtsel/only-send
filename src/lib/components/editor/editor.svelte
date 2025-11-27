@@ -25,6 +25,7 @@
     placeholder = "Write your email...",
     editable = true,
     files = $bindable<File[]>([]),
+    "aria-invalid": ariaInvalid,
   } = $props();
 
   // States reactive for buttons
@@ -122,7 +123,11 @@
   });
 </script>
 
-<div class="border rounded-t-md h-full shrink">
+<div
+  class={cn("border rounded-t-md h-full shrink", {
+    "border-red-500": ariaInvalid,
+  })}
+>
   {#if editor}
     <!-- Toolbar -->
     <div class="border-b p-2 flex gap-1">
