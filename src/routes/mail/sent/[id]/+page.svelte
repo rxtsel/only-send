@@ -79,25 +79,29 @@
   {:else}
     <!-- Email Header -->
     <div class="border-b">
-      <div class="p-6">
-        <div class="flex items-start justify-between mb-4">
-          <div class="flex-1">
+      <div class="pb-6">
+        <div class="grid items-center justify-between mb-4 relative">
+          <header
+            class="flex gap-1 justify-end absolute right-0 ml-auto -top-16"
+          >
+            <Button variant="outline" size="sm" onclick={handleReply}>
+              <Reply class="mr-2 h-4 w-4" />
+              Reply
+            </Button>
+
+            <Button variant="outline" size="sm" onclick={handleForward}>
+              <Forward class="mr-2 h-4 w-4" />
+              Forward
+            </Button>
+          </header>
+
+          <footer class="flex-1">
             <h1 class="text-2xl font-semibold mb-2">{email.subject}</h1>
             <div class="flex items-center gap-2 text-sm text-muted-foreground">
               <span class="font-medium">From:</span>
               <span>{email.from}</span>
             </div>
-          </div>
-          <div class="flex gap-2">
-            <Button variant="outline" size="sm" onclick={handleReply}>
-              <Reply class="mr-2 h-4 w-4" />
-              Reply
-            </Button>
-            <Button variant="outline" size="sm" onclick={handleForward}>
-              <Forward class="mr-2 h-4 w-4" />
-              Forward
-            </Button>
-          </div>
+          </footer>
         </div>
 
         <div class="space-y-2 text-sm">
