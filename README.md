@@ -1,7 +1,60 @@
-# Tauri + SvelteKit + TypeScript
+# SendOnly
 
-This template should help get you started developing with Tauri, SvelteKit and TypeScript in Vite.
+A minimal desktop application for sending emails from your own domain using **Resend**.
+Made with **Rust**, **Tauri**, and **Svelte**.
 
-## Recommended IDE Setup
+> [!IMPORTANT]
+> This project is in early development.  
+> Some features may be missing or unstable.
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer).
+## Why I built this
+
+I wanted a simple, privacy-friendly tool that lets me send emails from my own domain without needing to maintain a full email hosting setup. Most providers require complicated MX setups, storage, inbox management, spam filtering, and more — even when all you need is **sending**.
+
+SendOnly focuses on one thing:
+
+- [x] **Compose and send emails cleanly under your own domain**
+
+No inbox. No bloat. Just sending.
+
+## How it works
+
+SendOnly uses the **Resend API** to send emails through your verified domain.
+You enter your API key, set up your sender identities, and you’re ready to go.
+
+- Add multiple “From” email identities
+- Compose messages with rich content
+- Attach files
+- Send using your own domain
+- Local configuration stored securely through Tauri’s store
+
+Everything runs locally — SendOnly does not use any external backend.
+
+## Receiving Email (Optional)
+
+SendOnly is designed **only for sending**.
+For receiving, you can combine it with Cloudflare’s free email routing:
+
+- Cloudflare can forward incoming email from your domain… to any inbox you prefer (Gmail, Outlook, etc.)
+
+With Cloudflare forwarding + SendOnly, you cover both sides:
+
+- **Sending** → via SendOnly (Resend API)
+- **Receiving** → via Cloudflare Email Routing
+
+No need for a full email hosting provider.
+
+## Features
+
+- - [x] Send polished emails from a clean UI
+- - [x] Add CC, BCC, Reply-To, and message headers
+- - [x] Attachments support
+- - [x] Uses local secure storage for settings
+- - [x] Cross-platform via Tauri
+
+## Tech Stack
+
+- **Rust** — backend logic + Resend integration
+- **Tauri** — desktop app runtime
+- **Svelte 5** — front-end UI
+- **resend-rs** - Crate for interacting with the Resend API
