@@ -1,8 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import type z from "zod";
-import type { profileSchema } from "../schemas/profile.schema";
+import type { Profile } from "../types";
 
-type Profile = z.infer<typeof profileSchema>;
 
 export async function saveProfile(profile: Profile): Promise<void> {
   await invoke("save_profile_command", profile);

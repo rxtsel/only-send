@@ -7,11 +7,25 @@
   import * as DropdownMenu from "@/lib/components/ui/dropdown-menu/index.js";
   import * as Sidebar from "@/lib/components/ui/sidebar/index.js";
   import { useSidebar } from "@/lib/components/ui/sidebar/index.js";
-
-  let { user }: { user: { name: string; email: string; avatar: string } } =
-    $props();
+  import type { Profile } from "../types";
+  import { getProfile } from "../commom/profile";
+  import { onMount } from "svelte";
 
   const sidebar = useSidebar();
+
+  let user = $state<Profile>({
+    firstName: "Send",
+    lastName: "Only",
+    username: "send.only",
+    domain: "sendonly.example",
+  });
+
+  onMount(async () => {
+    const userData = await getProfile();
+    if (userData) {
+      user = userData;
+    }
+  });
 </script>
 
 <Sidebar.Menu>
@@ -25,12 +39,20 @@
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground md:h-8 md:p-0"
           >
             <Avatar.Root class="size-8 rounded-lg">
-              <Avatar.Image src={user.avatar} alt={user.name} />
-              <Avatar.Fallback class="rounded-lg">CN</Avatar.Fallback>
+              <Avatar.Image
+                src={user.username}
+                alt="{user.firstName} {user.lastName}"
+              />
+              <Avatar.Fallback class="rounded-lg">
+                {user.firstName.charAt(0) ?? "O"}
+                {user.lastName.charAt(0) ?? "S"}
+              </Avatar.Fallback>
             </Avatar.Root>
             <div class="grid flex-1 text-start text-sm leading-tight">
-              <span class="truncate font-medium">{user.name}</span>
-              <span class="truncate text-xs">{user.email}</span>
+              <span class="truncate font-medium"
+                >{user.firstName} {user.lastName}</span
+              >
+              <span class="truncate text-xs">{user.username}</span>
             </div>
             <ChevronsUpDownIcon class="ms-auto size-4" />
           </Sidebar.MenuButton>
@@ -45,12 +67,20 @@
         <DropdownMenu.Label class="p-0 font-normal">
           <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
             <Avatar.Root class="size-8 rounded-lg">
-              <Avatar.Image src="/icon-512.png" alt={user.name} />
-              <Avatar.Fallback class="rounded-lg">SO</Avatar.Fallback>
+              <Avatar.Image
+                src="/icon-512.png"
+                alt="{user.firstName} {user.lastName}"
+              />
+              <Avatar.Fallback class="rounded-lg">
+                {user.firstName.charAt(0) ?? "O"}
+                {user.lastName.charAt(0) ?? "S"}
+              </Avatar.Fallback>
             </Avatar.Root>
             <div class="grid flex-1 text-start text-sm leading-tight">
-              <span class="truncate font-medium">{user.name}</span>
-              <span class="truncate text-xs">{user.email}</span>
+              <span class="truncate font-medium"
+                >{user.firstName} {user.lastName}</span
+              >
+              <span class="truncate text-xs">{user.username}</span>
             </div>
           </div>
         </DropdownMenu.Label>

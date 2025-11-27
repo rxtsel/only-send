@@ -3,12 +3,18 @@
   import { Button } from "@/lib/components/ui/button/index.js";
   import * as Dialog from "@/lib/components/ui/dialog/index.js";
   import * as Sidebar from "@/lib/components/ui/sidebar/index.js";
-  import { Mail, User, Settings, SquarePen } from "@lucide/svelte";
+  import { Mail, User, Settings, SquarePen, Trash } from "@lucide/svelte";
   import * as Field from "@/lib/components/ui/field";
   import { Input } from "@/lib/components/ui/input";
-  import type { FromEmail } from "../types";
+  import type { FromEmail, Profile } from "../types";
   import { onMount } from "svelte";
-  import { formatFromEmail, listFromEmails } from "../commom/from-emails";
+  import {
+    createFromEmail,
+    formatFromEmail,
+    listFromEmails,
+  } from "../commom/from-emails";
+  import { getProfile } from "../commom/profile";
+  import { toast } from "svelte-sonner";
 
   const data = {
     nav: [
@@ -21,25 +27,38 @@
   let activeItem = $state("Profile");
   let errors: Record<string, string> = {};
   let isSaving = false;
+
   let fromEmails = $state<FromEmail[]>([]);
+  let profile = $state<Profile>({
+    firstName: "Send",
+    lastName: "Only",
+    username: "send.only",
+    domain: "sendonly.example",
+  });
 
-  function handleSubmitProfile(e: SubmitEvent) {
+  // TODO: implement this
+  async function handleCreateNewFromEmail(e: Event) {
     e.preventDefault();
-    console.log("Profile form submitted");
-  }
-
-  function handleSubmitEmailOptions(e: SubmitEvent) {
-    e.preventDefault();
-    console.log("Email sender options form submitted");
-  }
-
-  // Get From email options
-  onMount(async () => {
     try {
-      const list = await listFromEmails();
-      fromEmails = list;
-    } catch (e) {
-      console.error("[fromEmails] load error", e);
+      await createFromEmail({
+        label: "",
+        address: "",
+        isDefault: false,
+      });
+      toast.success("Email option created successfully");
+    } catch (error) {
+      console.error("Error creating from email:", error);
+    }
+  }
+
+  onMount(async () => {
+    const [profileData, fromEmailsData] = await Promise.all([
+      getProfile(),
+      listFromEmails(),
+    ]);
+    if (profileData) {
+      profile = profileData;
+      fromEmails = fromEmailsData;
     }
   });
 </script>
@@ -106,7 +125,7 @@
         </header>
         <div class="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pt-0 mr-7">
           {#if activeItem === "Profile"}
-            {@render profile()}
+            {@render profileComponent()}
           {:else if activeItem === "Email sender options"}
             {@render emailSenderOptions()}
           {/if}
@@ -116,8 +135,8 @@
   </Dialog.Content>
 </Dialog.Root>
 
-{#snippet profile()}
-  <form class="w-full" onsubmit={handleSubmitProfile}>
+{#snippet profileComponent()}
+  <form class="w-full">
     <Field.Group>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-2">
         <Field.Field>
@@ -125,6 +144,7 @@
           <Input
             id="firstName"
             name="firstName"
+            bind:value={profile.firstName}
             placeholder="Jonh"
             required
             aria-invalid={!!errors.firstName}
@@ -139,6 +159,7 @@
           <Input
             id="lastName"
             name="lastName"
+            bind:value={profile.lastName}
             placeholder="Doe"
             required
             aria-invalid={!!errors.lastName}
@@ -154,6 +175,7 @@
         <Input
           id="username"
           name="username"
+          bind:value={profile.username}
           placeholder="john_doe"
           required
           aria-invalid={!!errors.username}
@@ -172,20 +194,43 @@
 {/snippet}
 
 {#snippet emailSenderOptions()}
-  <form class="w-full" onsubmit={handleSubmitProfile}>
+  <form class="w-full" onsubmit={handleCreateNewFromEmail}>
     <Field.Group>
+      <div class="flex justify-end gap-x-2">
+        <Field.Field>
+          <Field.Label for="label">Label</Field.Label>
+          <Input
+            id="label"
+            name="label"
+            placeholder="Contact"
+            required
+            aria-invalid={!!errors.label}
+          />
+          {#if errors.label}
+            <Field.Error>{errors.label}</Field.Error>
+          {/if}
+        </Field.Field>
+
+        <Field.Field>
+          <Field.Label for="address">Address</Field.Label>
+          <Input
+            id="address"
+            name="address"
+            placeholder="contact@domain.com"
+            required
+            aria-invalid={!!errors.address}
+          />
+          {#if errors.address}
+            <Field.Error>{errors.address}</Field.Error>
+          {/if}
+        </Field.Field>
+      </div>
+
       <Field.Field>
-        <Field.Label for="emai">Email</Field.Label>
-        <Input
-          id="email"
-          name="email"
-          placeholder="email@example.com"
-          required
-          aria-invalid={!!errors.email}
-        />
-        {#if errors.email}
-          <Field.Error>{errors.email}</Field.Error>
-        {/if}
+        <Field.Label for="isDefault">
+          <input type="checkbox" id="isDefault" name="isDefault" required />
+          Mark as default?
+        </Field.Label>
       </Field.Field>
       <Field.Field>
         <Button type="submit" disabled={isSaving} class="w-full">
@@ -210,9 +255,12 @@
           <td class="border border-border px-4 py-2">
             {formatFromEmail(fromEmail)}
           </td>
-          <td class="border border-border px-4 py-2">
-            <Button variant="ghost" size="icon-sm">
+          <td class="border border-border px-4 py-2 justify-end flex gap-1">
+            <Button variant="outline" size="icon-sm">
               <SquarePen />
+            </Button>
+            <Button variant="destructive" size="icon-sm">
+              <Trash />
             </Button>
           </td>
         </tr>

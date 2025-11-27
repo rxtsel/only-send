@@ -53,6 +53,7 @@
   onMount(async () => {
     try {
       const exists = await hasApiKey();
+
       if (exists) goto("/mail/composer");
     } catch (err) {
       console.error(err);

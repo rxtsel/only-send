@@ -5,11 +5,6 @@
 
   // This is sample data
   const data = {
-    user: {
-      name: "Send Only",
-      email: "m@example.com",
-      avatar: "/icon-512.png",
-    },
     navMain: [
       {
         title: "Sent",
@@ -198,7 +193,7 @@
     </Sidebar.Content>
     <Sidebar.Footer>
       <SettingsDialog />
-      <NavUser user={data.user} />
+      <NavUser />
     </Sidebar.Footer>
   </Sidebar.Root>
 

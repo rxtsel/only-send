@@ -143,13 +143,9 @@
           </Select.Trigger>
           <Select.Content>
             {#if fromEmails.length === 0}
-              <Button
-                variant="ghost"
-                class="w-full text-center"
-                onclick={() => goto("/settings/emails")}
-              >
-                Create email address
-              </Button>
+              <span class="w-full text-center text-sm inline-block py-1">
+                Create email address in: Settings > Email sender options
+              </span>
             {:else}
               {#each fromEmails as option}
                 <Select.Item value={formatFromEmail(option)}
