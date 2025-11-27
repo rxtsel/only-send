@@ -1,20 +1,26 @@
 <script lang="ts">
-  import * as Breadcrumb from "@/lib/components/ui/breadcrumb/index.js";
-  import { Button } from "@/lib/components/ui/button/index.js";
-  import * as Dialog from "@/lib/components/ui/dialog/index.js";
-  import * as Sidebar from "@/lib/components/ui/sidebar/index.js";
+  import * as Breadcrumb from "@/lib/components/ui/breadcrumb";
+  import { Button, buttonVariants } from "@/lib/components/ui/button";
+  import * as Dialog from "@/lib/components/ui/dialog";
+  import * as Sidebar from "@/lib/components/ui/sidebar";
   import { Mail, User, Settings, SquarePen, Trash } from "@lucide/svelte";
   import * as Field from "@/lib/components/ui/field";
   import { Input } from "@/lib/components/ui/input";
   import type { FromEmail, Profile } from "../types";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { onMount } from "svelte";
   import {
     createFromEmail,
+    updateFromEmail,
+    deleteFromEmail,
     formatFromEmail,
     listFromEmails,
   } from "../commom/from-emails";
-  import { getProfile } from "../commom/profile";
+  import { getProfile, saveProfile } from "../commom/profile";
   import { toast } from "svelte-sonner";
+  import type { ZodError } from "zod/v4";
+  import { profileSchema } from "../schemas/profile.schema";
+  import { emailOptionSchema } from "../schemas/email-option.schema";
 
   const data = {
     nav: [
@@ -25,41 +31,159 @@
 
   let open = $state(false);
   let activeItem = $state("Profile");
-  let errors: Record<string, string> = {};
-  let isSaving = false;
+  let profileErrors = $state<Record<string, string>>({});
+  let emailErrors = $state<Record<string, string>>({});
+  let isSaving = $state(false);
+  let isDeleteDialogOpen = $state(false);
+
+  // From Email form state
+  let fromEmailForm = $state({
+    id: "",
+    label: "",
+    address: "",
+    isDefault: false,
+  });
+  let isEditingFromEmail = $state(false);
 
   let fromEmails = $state<FromEmail[]>([]);
   let profile = $state<Profile>({
-    firstName: "Send",
-    lastName: "Only",
-    username: "send.only",
-    domain: "sendonly.example",
+    firstName: "",
+    lastName: "",
+    username: "",
+    domain: "",
   });
 
-  // TODO: implement this
-  async function handleCreateNewFromEmail(e: Event) {
-    e.preventDefault();
+  function handleZodError(error: ZodError): Record<string, string> {
+    const errors: Record<string, string> = {};
+    error.issues.forEach((err) => {
+      const path = err.path.join(".");
+      errors[path] = err.message;
+    });
+    return errors;
+  }
+
+  async function loadData() {
     try {
-      await createFromEmail({
-        label: "",
-        address: "",
-        isDefault: false,
-      });
-      toast.success("Email option created successfully");
+      const [profileData, fromEmailsData] = await Promise.all([
+        getProfile(),
+        listFromEmails(),
+      ]);
+      if (profileData) {
+        profile = profileData;
+      }
+      fromEmails = fromEmailsData;
     } catch (error) {
-      console.error("Error creating from email:", error);
+      console.error("Error loading data:", error);
+      toast.error("Failed to load data");
+    }
+  }
+
+  // Profile handlers
+  async function handleSaveProfile(e: Event) {
+    e.preventDefault();
+    profileErrors = {};
+    isSaving = true;
+
+    try {
+      // Validate with Zod
+      const validatedData = profileSchema.parse(profile);
+
+      await saveProfile(validatedData);
+      toast.success("Profile saved successfully");
+    } catch (error) {
+      if (error instanceof Error && error.name === "ZodError") {
+        profileErrors = handleZodError(error as ZodError);
+      } else {
+        console.error("Error saving profile:", error);
+        toast.error("Failed to save profile");
+      }
+    } finally {
+      isSaving = false;
+    }
+  }
+
+  // From Email handlers
+  function resetFromEmailForm() {
+    fromEmailForm = {
+      id: "",
+      label: "",
+      address: "",
+      isDefault: false,
+    };
+    isEditingFromEmail = false;
+    emailErrors = {};
+  }
+
+  async function handleSubmitFromEmail(e: Event) {
+    e.preventDefault();
+    emailErrors = {};
+    isSaving = true;
+
+    try {
+      // Validate with Zod
+      const validatedData = emailOptionSchema.parse({
+        label: fromEmailForm.label,
+        address: fromEmailForm.address,
+      });
+
+      if (isEditingFromEmail && fromEmailForm.id) {
+        // Update existing
+        await updateFromEmail({
+          id: fromEmailForm.id,
+          label: validatedData.label,
+          address: validatedData.address,
+          isDefault: fromEmailForm.isDefault,
+        });
+        toast.success("Email option updated successfully");
+      } else {
+        // Create new
+        await createFromEmail({
+          label: validatedData.label,
+          address: validatedData.address,
+          isDefault: fromEmailForm.isDefault,
+        });
+        toast.success("Email option created successfully");
+      }
+
+      // Reload data and reset form
+      await loadData();
+      resetFromEmailForm();
+    } catch (error) {
+      if (error instanceof Error && error.name === "ZodError") {
+        emailErrors = handleZodError(error as ZodError);
+      } else {
+        console.error("Error saving from email:", error);
+        toast.error("Failed to save email option");
+      }
+    } finally {
+      isSaving = false;
+    }
+  }
+
+  function handleEditFromEmail(email: FromEmail) {
+    fromEmailForm = {
+      id: email.id,
+      label: email.label,
+      address: email.address,
+      isDefault: email.isDefault,
+    };
+    isEditingFromEmail = true;
+    emailErrors = {};
+  }
+
+  async function handleDeleteFromEmail(id: string) {
+    try {
+      await deleteFromEmail(id);
+      toast.success("Email option deleted successfully");
+      await loadData();
+    } catch (error) {
+      console.error("Error deleting from email:", error);
+      toast.error("Failed to delete email option");
     }
   }
 
   onMount(async () => {
-    const [profileData, fromEmailsData] = await Promise.all([
-      getProfile(),
-      listFromEmails(),
-    ]);
-    if (profileData) {
-      profile = profileData;
-      fromEmails = fromEmailsData;
-    }
+    await loadData();
   });
 </script>
 
@@ -107,7 +231,7 @@
       </Sidebar.Root>
       <main class="flex h-[480px] flex-1 flex-col overflow-hidden">
         <header
-          class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12"
+          class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
         >
           <div class="flex items-center gap-2 px-4">
             <Breadcrumb.Root>
@@ -136,7 +260,7 @@
 </Dialog.Root>
 
 {#snippet profileComponent()}
-  <form class="w-full">
+  <form class="w-full" onsubmit={handleSaveProfile}>
     <Field.Group>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-2">
         <Field.Field>
@@ -145,12 +269,12 @@
             id="firstName"
             name="firstName"
             bind:value={profile.firstName}
-            placeholder="Jonh"
+            placeholder="John"
             required
-            aria-invalid={!!errors.firstName}
+            aria-invalid={!!profileErrors.firstName}
           />
-          {#if errors.firstName}
-            <Field.Error>{errors.firstName}</Field.Error>
+          {#if profileErrors.firstName}
+            <Field.Error>{profileErrors.firstName}</Field.Error>
           {/if}
         </Field.Field>
 
@@ -162,10 +286,10 @@
             bind:value={profile.lastName}
             placeholder="Doe"
             required
-            aria-invalid={!!errors.lastName}
+            aria-invalid={!!profileErrors.lastName}
           />
-          {#if errors.lastName}
-            <Field.Error>{errors.lastName}</Field.Error>
+          {#if profileErrors.lastName}
+            <Field.Error>{profileErrors.lastName}</Field.Error>
           {/if}
         </Field.Field>
       </div>
@@ -178,12 +302,34 @@
           bind:value={profile.username}
           placeholder="john_doe"
           required
-          aria-invalid={!!errors.username}
+          aria-invalid={!!profileErrors.username}
         />
-        {#if errors.username}
-          <Field.Error>{errors.username}</Field.Error>
+        {#if profileErrors.username}
+          <Field.Error>{profileErrors.username}</Field.Error>
         {/if}
+        <Field.Description>
+          Only letters, numbers, and underscores (3-30 characters)
+        </Field.Description>
       </Field.Field>
+
+      <Field.Field>
+        <Field.Label for="domain">Domain</Field.Label>
+        <Input
+          id="domain"
+          name="domain"
+          bind:value={profile.domain}
+          placeholder="example.com"
+          required
+          aria-invalid={!!profileErrors.domain}
+        />
+        {#if profileErrors.domain}
+          <Field.Error>{profileErrors.domain}</Field.Error>
+        {/if}
+        <Field.Description>
+          Without protocol (e.g., example.com)
+        </Field.Description>
+      </Field.Field>
+
       <Field.Field>
         <Button type="submit" disabled={isSaving} class="w-full">
           {isSaving ? "Saving..." : "Save Changes"}
@@ -194,20 +340,37 @@
 {/snippet}
 
 {#snippet emailSenderOptions()}
-  <form class="w-full" onsubmit={handleCreateNewFromEmail}>
+  <form class="w-full" onsubmit={handleSubmitFromEmail}>
     <Field.Group>
-      <div class="flex justify-end gap-x-2">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-sm font-medium">
+          {isEditingFromEmail ? "Edit Email Option" : "Add New Email Option"}
+        </h3>
+        {#if isEditingFromEmail}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onclick={resetFromEmailForm}
+          >
+            Cancel Edit
+          </Button>
+        {/if}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-2">
         <Field.Field>
           <Field.Label for="label">Label</Field.Label>
           <Input
             id="label"
             name="label"
+            bind:value={fromEmailForm.label}
             placeholder="Contact"
             required
-            aria-invalid={!!errors.label}
+            aria-invalid={!!emailErrors.label}
           />
-          {#if errors.label}
-            <Field.Error>{errors.label}</Field.Error>
+          {#if emailErrors.label}
+            <Field.Error>{emailErrors.label}</Field.Error>
           {/if}
         </Field.Field>
 
@@ -216,55 +379,122 @@
           <Input
             id="address"
             name="address"
+            type="email"
+            bind:value={fromEmailForm.address}
             placeholder="contact@domain.com"
             required
-            aria-invalid={!!errors.address}
+            aria-invalid={!!emailErrors.address}
           />
-          {#if errors.address}
-            <Field.Error>{errors.address}</Field.Error>
+          {#if emailErrors.address}
+            <Field.Error>{emailErrors.address}</Field.Error>
           {/if}
         </Field.Field>
       </div>
 
       <Field.Field>
-        <Field.Label for="isDefault">
-          <input type="checkbox" id="isDefault" name="isDefault" required />
-          Mark as default?
-        </Field.Label>
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            bind:checked={fromEmailForm.isDefault}
+            class="rounded border-gray-300"
+          />
+          Mark as default
+        </label>
       </Field.Field>
+
       <Field.Field>
         <Button type="submit" disabled={isSaving} class="w-full">
-          {isSaving ? "Saving..." : "Create"}
+          {isSaving ? "Saving..." : isEditingFromEmail ? "Update" : "Create"}
         </Button>
       </Field.Field>
     </Field.Group>
   </form>
 
-  <table
-    class="w-full table-auto border-collapse border border-border rounded-md"
-  >
-    <thead>
-      <tr>
-        <th class="border border-border p-2 text-xs text-left">From Email</th>
-        <th class="border border-border p-2 text-xs text-left">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {#each fromEmails as fromEmail (fromEmail.address)}
-        <tr>
-          <td class="border border-border px-4 py-2">
-            {formatFromEmail(fromEmail)}
-          </td>
-          <td class="border border-border px-4 py-2 justify-end flex gap-1">
-            <Button variant="outline" size="icon-sm">
-              <SquarePen />
-            </Button>
-            <Button variant="destructive" size="icon-sm">
-              <Trash />
-            </Button>
-          </td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+  <div class="mt-6">
+    <h3 class="text-sm font-medium mb-2">Saved Email Options</h3>
+    {#if fromEmails.length === 0}
+      <p class="text-sm text-muted-foreground text-center py-4">
+        No email options configured yet
+      </p>
+    {:else}
+      <table
+        class="w-full table-auto border-collapse border border-border rounded-md"
+      >
+        <thead>
+          <tr class="bg-muted/50">
+            <th class="border border-border p-2 text-xs text-left"
+              >From Email</th
+            >
+            <th class="border border-border p-2 text-xs text-left w-24"
+              >Actions</th
+            >
+          </tr>
+        </thead>
+        <tbody>
+          {#each fromEmails as fromEmail (fromEmail.id)}
+            <tr class="hover:bg-muted/30">
+              <td class="border border-border px-4 py-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs">{formatFromEmail(fromEmail)}</span>
+                  {#if fromEmail.isDefault}
+                    <span
+                      class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded"
+                    >
+                      Default
+                    </span>
+                  {/if}
+                </div>
+              </td>
+              <td class="border border-border px-4 py-2">
+                <div class="flex justify-end gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onclick={() => handleEditFromEmail(fromEmail)}
+                    title="Edit"
+                  >
+                    <SquarePen />
+                  </Button>
+                  {@render confirmDelete(fromEmail.id)}
+                </div>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet confirmDelete(fromEmailId: string)}
+  <AlertDialog.Root>
+    <AlertDialog.Trigger>
+      <Button
+        variant="destructive"
+        size="icon-sm"
+        onclick={() => (isDeleteDialogOpen = true)}
+        title="Delete"
+      >
+        <Trash />
+      </Button>
+    </AlertDialog.Trigger>
+    <AlertDialog.Content>
+      <AlertDialog.Header>
+        <AlertDialog.Title>Are you absolutely sure?</AlertDialog.Title>
+        <AlertDialog.Description>
+          This action cannot be undone. This will permanently delete item from
+          storage.
+        </AlertDialog.Description>
+      </AlertDialog.Header>
+      <AlertDialog.Footer>
+        <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+        <AlertDialog.Action
+          class={buttonVariants({ variant: "destructive" })}
+          onclick={() => handleDeleteFromEmail(fromEmailId)}
+        >
+          Continue
+        </AlertDialog.Action>
+      </AlertDialog.Footer>
+    </AlertDialog.Content>
+  </AlertDialog.Root>
 {/snippet}

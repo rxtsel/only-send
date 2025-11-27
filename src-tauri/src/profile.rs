@@ -1,6 +1,5 @@
-use tauri::{AppHandle, Wry};
-
 use crate::store::{load_profile, save_profile, Profile};
+use tauri::{AppHandle, Wry};
 
 #[tauri::command]
 pub fn get_profile(app: AppHandle<Wry>) -> Result<Option<Profile>, String> {
@@ -23,3 +22,4 @@ pub fn save_profile_command(
     };
     save_profile(&app, &profile)
 }
+
