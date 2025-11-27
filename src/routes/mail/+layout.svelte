@@ -2,11 +2,15 @@
   import { page } from "$app/state";
   import AppSidebar from "@/lib/components/app-sidebar.svelte";
   import * as Breadcrumb from "@/lib/components/ui/breadcrumb";
-  import Button from "@/lib/components/ui/button/button.svelte";
   import { Separator } from "@/lib/components/ui/separator";
   import * as Sidebar from "@/lib/components/ui/sidebar";
+  import { Send } from "@lucide/svelte";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog";
+  import { buttonVariants } from "$lib/components/ui/button";
 
   let { children } = $props();
+
+  let isConfirmDialogOpen = $state(false);
 </script>
 
 <Sidebar.Provider style="--sidebar-width: 350px;">
@@ -34,9 +38,11 @@
           </Breadcrumb.List>
         </Breadcrumb.Root>
       {:else}
-        <Button form="compose-email-form" type="submit" class="w-fit ml-auto">
-          Send
-        </Button>
+        <div class="flex w-full justify-between items-center gap-2">
+          <h2 class="text-lg font-semibold">New Email</h2>
+
+          {@render ConfirmDialog()}
+        </div>
       {/if}
     </header>
     <div class="flex flex-1 flex-col gap-4 p-4">
@@ -44,3 +50,30 @@
     </div>
   </Sidebar.Inset>
 </Sidebar.Provider>
+
+{#snippet ConfirmDialog()}
+  <AlertDialog.Root bind:open={isConfirmDialogOpen}>
+    <AlertDialog.Trigger class={buttonVariants({ variant: "default" })}>
+      <Send />
+      Send
+    </AlertDialog.Trigger>
+    <AlertDialog.Content>
+      <AlertDialog.Header>
+        <AlertDialog.Title>Are you absolutely sure?</AlertDialog.Title>
+        <AlertDialog.Description>
+          This action cannot be undone. This will permanently send your email
+        </AlertDialog.Description>
+      </AlertDialog.Header>
+      <AlertDialog.Footer>
+        <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+        <AlertDialog.Action
+          form="compose-email-form"
+          type="submit"
+          onclick={() => (isConfirmDialogOpen = false)}
+        >
+          Continue
+        </AlertDialog.Action>
+      </AlertDialog.Footer>
+    </AlertDialog.Content>
+  </AlertDialog.Root>
+{/snippet}
