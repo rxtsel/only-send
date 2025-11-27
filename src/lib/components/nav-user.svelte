@@ -40,12 +40,13 @@
           >
             <Avatar.Root class="size-8 rounded-lg">
               <Avatar.Image
-                src={user.username}
+                src="/icon-512.png"
                 alt="{user.firstName} {user.lastName}"
               />
               <Avatar.Fallback class="rounded-lg">
-                {user.firstName.charAt(0) ?? "O"}
-                {user.lastName.charAt(0) ?? "S"}
+                {user.firstName.charAt(0).toUpperCase() ?? "O"}{user.lastName
+                  .charAt(0)
+                  .toUpperCase() ?? "S"}
               </Avatar.Fallback>
             </Avatar.Root>
             <div class="grid flex-1 text-start text-sm leading-tight">
@@ -68,12 +69,12 @@
           <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
             <Avatar.Root class="size-8 rounded-lg">
               <Avatar.Image
-                src="/icon-512.png"
+                src={user.username}
                 alt="{user.firstName} {user.lastName}"
               />
               <Avatar.Fallback class="rounded-lg">
-                {user.firstName.charAt(0) ?? "O"}
-                {user.lastName.charAt(0) ?? "S"}
+                {user.firstName.charAt(0) ?? "O"}{user.lastName.charAt(0) ??
+                  "S"}
               </Avatar.Fallback>
             </Avatar.Root>
             <div class="grid flex-1 text-start text-sm leading-tight">
