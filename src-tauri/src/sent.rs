@@ -32,7 +32,7 @@ pub async fn list_sent_emails(
     let lim = limit.unwrap_or(12);
     let off = offset.unwrap_or(0);
 
-    // Pedimos hasta offset + limit, para poder "paginar" a mano
+    // Request offset + limit, to manually "paginate"
     let effective_limit = (lim + off).min(255);
     let list_opts = ListOptions::default().with_limit(effective_limit as u8);
 
@@ -52,7 +52,7 @@ pub async fn list_sent_emails(
             from: email.from,
             to: email.to,
             subject: email.subject,
-            html: email.html,
+            html: None,
             created_at: email.created_at,
             cc: email.cc,
             bcc: email.bcc,
