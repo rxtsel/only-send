@@ -14,6 +14,8 @@
   import { emailComposerSchema } from "@/lib/schemas/email-composer.schema";
   import { toast } from "svelte-sonner";
   import { goto } from "$app/navigation";
+  import { invoke } from "@tauri-apps/api/core";
+  import type { AttachmentPayload } from "@/lib/types";
 
   const fromEmailOptions = [
     "Cristhian <c@rxtsel.dev>",
@@ -26,6 +28,7 @@
   let subject = $state<string>("");
   let content = $state<string>("");
   let files = $state<File[]>([]);
+  let attachments = $state<AttachmentPayload[]>([]);
 
   let isCcEnabled = $state<boolean>(false);
   let isBccEnabled = $state<boolean>(false);
@@ -39,55 +42,67 @@
 
   let errors: Record<string, string> = $state({});
 
-  function handleSubmit(event: Event) {
+  async function handleSubmit(event: Event) {
     event.preventDefault();
 
     errors = {};
     const form = event.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
 
-    // Get all to emails
-    const toEmailsList = formData.getAll("to");
-
-    const data = {
-      from: formData.get("from"),
-      to: toEmailsList,
+    // Build payload from state, not direct FormData arrays
+    const payload = {
+      from, // already bound via Select
+      to: toEmails.map((t) => t.text), // Tag[] -> string[]
       subject: messageId
-        ? "Re: " + formData.get("subject")
-        : formData.get("subject"),
-      bcc: isBccEnabled ? formData.getAll("bcc") : [],
-      cc: isCcEnabled ? formData.getAll("cc") : [],
-      replyTo: isReplyToEnabled ? formData.get("replyTo") : null,
+        ? subject.startsWith("Re: ")
+          ? subject
+          : "Re: " + subject
+        : subject,
+      bcc: isBccEnabled ? bccEmails.map((t) => t.text) : [],
+      cc: isCcEnabled ? ccEmails.map((t) => t.text) : [],
+      replyTo: isReplyToEnabled
+        ? (formData.get("replyTo") as string | null)
+        : null,
       content,
       files,
-      messageId: messageId ? messageId : null,
+      messageId,
+      attachments,
     };
 
-    const rawData = emailComposerSchema.safeParse(data);
+    const parsed = emailComposerSchema.safeParse(payload);
 
-    if (!rawData.success) {
-      rawData.error.issues.forEach((issue) => {
-        errors[issue.path[0] as string] = issue.message;
+    if (!parsed.success) {
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string;
+        errors[field] = issue.message;
       });
       return;
     }
 
-    // Reset form and states
-    toEmails = [];
-    from = fromEmailOptions[0];
-    subject = "";
-    content = "";
-    files = [];
-    isCcEnabled = false;
-    isBccEnabled = false;
-    isReplyToEnabled = false;
-    ccEmails = [];
-    bccEmails = [];
-    messageId = null;
-    form.reset();
+    try {
+      await invoke("send_email", { data: parsed.data });
 
-    toast.success("Email send successfully!");
-    goto("/mail/sent");
+      // Reset form and states
+      toEmails = [];
+      from = fromEmailOptions[0];
+      subject = "";
+      content = "";
+      files = [];
+      isCcEnabled = false;
+      isBccEnabled = false;
+      isReplyToEnabled = false;
+      ccEmails = [];
+      bccEmails = [];
+      messageId = null;
+      attachments = [];
+      form.reset();
+
+      toast.success("Email send successfully!");
+      goto("/mail/sent");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to send email. Please try again.");
+    }
   }
 </script>
 
@@ -241,7 +256,12 @@
     <Field.Field class="h-full">
       <Field.Label for="content">Content</Field.Label>
       <div class="h-full flex flex-col">
-        <Editor bind:content bind:files aria-invalid={!!errors.content} />
+        <Editor
+          bind:content
+          bind:files
+          aria-invalid={!!errors.content}
+          bind:attachments
+        />
         {#if files.length}
           <div class="border border-t-0 min-h-20 max-h-30 rounded-b-md z-10">
             <ul

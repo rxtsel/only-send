@@ -16,6 +16,7 @@
 
   import { cn } from "@/lib/utils";
   import Input from "../ui/input/input.svelte";
+  import type { AttachmentPayload } from "@/lib/types";
 
   let element = $state<HTMLDivElement | null>(null);
   let editor = $state<Editor | null>(null);
@@ -25,6 +26,7 @@
     placeholder = "Write your email...",
     editable = true,
     files = $bindable<File[]>([]),
+    attachments = $bindable<AttachmentPayload[]>([]),
     "aria-invalid": ariaInvalid,
   } = $props();
 
@@ -246,11 +248,42 @@
           name="files"
           class="hidden"
           multiple
-          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-          onchange={(e) => {
+          accept="image/*,application/pdf,.pdf,
+            application/msword,
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document,
+            application/vnd.ms-excel,
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
+            application/vnd.ms-powerpoint,
+            application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          onchange={async (e) => {
             const input = e.currentTarget as HTMLInputElement;
-            const list = input.files;
-            files = list ? Array.from(list) : [];
+            if (!input.files) return;
+
+            const selectedFiles = Array.from(input.files);
+            files = selectedFiles;
+
+            // Convert to base64 to send it to Rust
+            const newAttachments: AttachmentPayload[] = [];
+
+            for (const file of selectedFiles) {
+              const buffer = await file.arrayBuffer();
+              const bytes = new Uint8Array(buffer);
+
+              // ArrayBuffer -> base64
+              let binary = "";
+              for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+              }
+              const base64 = btoa(binary);
+
+              newAttachments.push({
+                filename: file.name,
+                content: base64,
+                mimeType: file.type || "application/octet-stream",
+              });
+            }
+
+            attachments = newAttachments;
           }}
         />
         <Paperclip class="size-4" />
