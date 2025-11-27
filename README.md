@@ -51,6 +51,7 @@ No need for a full email hosting provider.
 - - [x] Attachments support
 - - [x] Uses local secure storage for settings
 - - [x] Cross-platform via Tauri
+- - [x] View a list of sent emails
 
 ## Tech Stack
 
@@ -58,3 +59,17 @@ No need for a full email hosting provider.
 - **Tauri** — desktop app runtime
 - **Svelte 5** — front-end UI
 - **resend-rs** - Crate for interacting with the Resend API
+
+## Building Locally
+
+To build the application locally:
+
+```
+bun tauri build
+```
+
+If you encounter issues with the above command (such as errors related to binary stripping), try the following:
+
+```
+NO_STRIP=true bun tauri build
+```
