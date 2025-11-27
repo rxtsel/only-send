@@ -6,7 +6,12 @@
   import { ArrowLeft, Reply, Forward, Loader } from "@lucide/svelte/icons";
   import { goto } from "$app/navigation";
   import type { SentEmail } from "@/lib/types";
-  import { formatEmailDate, getSentEmail } from "@/lib/commom/sent";
+  import {
+    formatEmailDate,
+    getSentEmail,
+    isTemplateHtml,
+  } from "@/lib/commom/sent";
+  import Editor from "@/lib/components/editor/editor.svelte";
 
   let email = $state<SentEmail | null>(null);
   let isLoading = $state(true);
@@ -136,14 +141,17 @@
     </div>
 
     <!-- Email Content -->
-    <div class="flex-1 overflow-y-auto p-6">
+    <div class="flex-1 overflow-y-auto">
       {#if email.html}
-        <div class="prose prose-sm max-w-none dark:prose-invert">
-          <!-- Using @tiptap/core in read-only mode or just render HTML -->
+        {#if isTemplateHtml(email.html)}
           {@html email.html}
-        </div>
+        {:else}
+          <Editor content={email.html} editable={false} />
+        {/if}
       {:else}
-        <div class="text-muted-foreground text-sm">No content available</div>
+        <div class="text-muted-foreground text-sm p-6">
+          No content available
+        </div>
       {/if}
     </div>
   {/if}

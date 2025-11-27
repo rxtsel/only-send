@@ -128,9 +128,10 @@
 <div
   class={cn("border rounded-t-md h-full shrink", {
     "border-red-500": ariaInvalid,
+    "border-0": !editable,
   })}
 >
-  {#if editor}
+  {#if editor && editable}
     <!-- Toolbar -->
     <div class="border-b p-2 flex gap-1">
       <Button
