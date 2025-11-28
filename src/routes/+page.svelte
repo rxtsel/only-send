@@ -188,7 +188,7 @@
     <Loader class="animate-spin" />
   </div>
 {:else}
-  <main class="container min-h-svh flex justify-center items-center flex-col">
+  <main class="container mx-auto min-h-svh flex justify-center items-center flex-col">
     <header class="text-center mb-8">
       <Logo class="mx-auto mb-6" />
       <h1 class="text-3xl font-bold mb-4">
