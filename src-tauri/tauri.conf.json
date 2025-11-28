@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "SendOnly",
-        "width": 800,
+        "width": 1024,
         "height": 600,
-        "minWidth": 600,
-        "minHeight": 400,
+        "minWidth": 1024,
+        "minHeight": 600,
         "center": true
       }
     ],
