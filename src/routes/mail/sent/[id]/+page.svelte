@@ -98,15 +98,18 @@
           <footer class="flex-1">
             <h1 class="text-2xl font-semibold mb-2">{email.subject}</h1>
             <div class="flex items-center gap-2 text-sm text-muted-foreground">
-              <span class="font-medium">From:</span>
-              <span>{email.from}</span>
+              <span class="font-medium min-w-10">From:</span>
+
+              <span class="bg-muted px-2 py-0.5 text-black rounded"
+                >{email.from}</span
+              >
             </div>
           </footer>
         </div>
 
         <div class="space-y-2 text-sm">
           <div class="flex items-start gap-2">
-            <span class="text-muted-foreground font-medium min-w-12">To:</span>
+            <span class="text-muted-foreground font-medium min-w-10">To:</span>
             <div class="flex flex-wrap gap-1">
               {#each email.to as recipient}
                 <span class="bg-muted px-2 py-0.5 rounded">{recipient}</span>
@@ -116,7 +119,7 @@
 
           {#if email.cc && email.cc.length > 0}
             <div class="flex items-start gap-2">
-              <span class="text-muted-foreground font-medium min-w-12">CC:</span
+              <span class="text-muted-foreground font-medium min-w-10">CC:</span
               >
               <div class="flex flex-wrap gap-1">
                 {#each email.cc as recipient}
