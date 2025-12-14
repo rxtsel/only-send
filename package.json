@@ -1,7 +1,7 @@
 {
   "name": "only-send",
-  "version": "0.1.0",
-  "description": "",
+  "version": "0.1.1",
+  "description": "A clean and minimal email composer powered by Resend.",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -11,7 +11,7 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "tauri": "tauri"
   },
-  "license": "MIT",
+  "license": "GPL-2.0-only",
   "dependencies": {
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
