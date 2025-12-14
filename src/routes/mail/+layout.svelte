@@ -31,7 +31,7 @@
   <AppSidebar />
   <Sidebar.Inset>
     <header
-      class="bg-background z-1 sticky top-0 flex shrink-0 items-center gap-2 border-b p-4"
+      class="bg-background z-1 fixed w-full top-0 flex shrink-0 items-center gap-2 border-b px-4 py-4.5 max-h-[65px] h-[65px]"
     >
       {#if !isComposer}
         <Sidebar.Trigger class="-ms-1" />
@@ -72,7 +72,7 @@
           </Breadcrumb.List>
         </Breadcrumb.Root>
       {:else}
-        <div class="flex w-full justify-between items-center gap-2">
+        <div class="flex w-full justify-between items-center pr-13 gap-x-2">
           <h2 class="text-lg font-semibold">New Email</h2>
 
           {@render ConfirmDialog()}
@@ -80,7 +80,7 @@
       {/if}
     </header>
 
-    <div class="flex flex-1 flex-col gap-4 p-4">
+    <div class="flex flex-1 flex-col gap-4 pb-4 pt-20 px-4">
       {@render children()}
     </div>
   </Sidebar.Inset>
