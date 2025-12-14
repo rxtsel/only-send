@@ -147,7 +147,7 @@
         ),
       ]);
 
-      toast.success("Setup complete! Welcome to SendOnly");
+      toast.success("Setup complete! Welcome to OnlySend");
       goto("/mail/sent");
     } catch (err) {
       console.error(err);
@@ -188,11 +188,13 @@
     <Loader class="animate-spin" />
   </div>
 {:else}
-  <main class="container mx-auto min-h-svh flex justify-center items-center flex-col">
+  <main
+    class="container mx-auto min-h-svh flex justify-center items-center flex-col"
+  >
     <header class="text-center mb-8">
       <Logo class="mx-auto mb-6" />
       <h1 class="text-3xl font-bold mb-4">
-        {#if step === 1}Welcome to SendOnly{/if}
+        {#if step === 1}Welcome to OnlySend{/if}
         {#if step === 2}Profile Setup{/if}
         {#if step === 3}Email Options{/if}
       </h1>

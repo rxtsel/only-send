@@ -17,7 +17,7 @@
     firstName: "Send",
     lastName: "Only",
     username: "send.only",
-    domain: "sendonly.example",
+    domain: "onlysend.example",
   });
 
   onMount(async () => {
