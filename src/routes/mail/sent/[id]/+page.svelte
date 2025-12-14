@@ -11,7 +11,7 @@
     isTemplateHtml,
   } from "@/lib/commom/sent";
   import Editor from "@/lib/components/editor/editor.svelte";
-  import { ArrowLeft, Forward, Loader, Reply } from "@lucide/svelte";
+  import { ArrowLeft, Loader } from "@lucide/svelte";
 
   let email = $state<SentEmail | null>(null);
   let isLoading = $state(true);
@@ -35,18 +35,6 @@
     } finally {
       isLoading = false;
     }
-  }
-
-  function handleReply() {
-    if (!email) return;
-    // Navigate to composer with reply data
-    goto(`/mail/composer?replyTo=${email.id}`);
-  }
-
-  function handleForward() {
-    if (!email) return;
-    // Navigate to composer with forward data
-    goto(`/mail/composer?forward=${email.id}`);
   }
 
   onMount(() => {
@@ -81,20 +69,6 @@
     <div class="border-b">
       <div class="pb-6">
         <div class="grid items-center justify-between mb-4 relative">
-          <header
-            class="flex gap-1 justify-end fixed right-3.5 ml-auto z-2 top-3.5"
-          >
-            <Button variant="outline" size="sm" onclick={handleReply}>
-              <Reply class="mr-2 h-4 w-4" />
-              Reply
-            </Button>
-
-            <Button variant="outline" size="sm" onclick={handleForward}>
-              <Forward class="mr-2 h-4 w-4" />
-              Forward
-            </Button>
-          </header>
-
           <footer class="flex-1">
             <h1 class="text-2xl font-semibold mb-2">{email.subject}</h1>
             <div class="flex items-center gap-2 text-sm text-muted-foreground">
