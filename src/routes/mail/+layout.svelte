@@ -17,6 +17,7 @@
     // Route helpers
     const isSentRoot = $derived(pathname === "/mail/sent");
     const isSentDetail = $derived(pathname.startsWith("/mail/sent/"));
+    const isComposer = $derived(pathname === "/mail/composer");
 
     // Extract only the id when we are on /mail/sent/:id
     const emailId = $derived(
@@ -24,13 +25,13 @@
     );
 </script>
 
-<Sidebar.Provider style="--sidebar-width: 450px;">
+<Sidebar.Provider style="--sidebar-width: 450px;" open={!isComposer}>
     <AppSidebar />
     <Sidebar.Inset>
         <header
             class="bg-background z-10 sticky top-0 flex shrink-0 items-center gap-2 border-b px-4 py-4.5 max-h-[65px] h-[65px]"
         >
-            {#if isSentRoot}
+            {#if isSentRoot || isSentDetail}
                 <Sidebar.Trigger class="-ms-1" />
 
                 <Separator
@@ -63,7 +64,7 @@
                         {/if}
                     </Breadcrumb.List>
                 </Breadcrumb.Root>
-            {:else}
+            {:else if isComposer}
                 <div
                     class="flex flex-1 min-w-0 justify-between items-center gap-x-2"
                 >
